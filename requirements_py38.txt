@@ -1,0 +1,8 @@
+flask
+papermill
+nbconvert
+notebook
+numpy
+pandas
+# torch (CPU) 示例 - 若需要请放开下面一行并选合适版本：
+# torch==1.11.0+cpu - 注：在无 GPU 的 Docker 中安装 torch 可能需要额外索引或 wheel
