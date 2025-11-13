@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3.8 python3.8-venv python3.8-dev \
     python3.7 python3.7-venv python3.7-dev \
     python3-pip r-base && \
-    # No R package dependencies detected automatically && rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/*
 
 RUN python3.8 -m venv /opt/py38 && /opt/py38/bin/pip install --upgrade pip
 RUN python3.7 -m venv /opt/py37 && /opt/py37/bin/pip install --upgrade pip
