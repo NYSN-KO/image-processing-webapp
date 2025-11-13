@@ -1,12 +1,15 @@
-# 使用 Ubuntu 20.04，支持 Python 3.7 / 3.8 安装
+# 使用 Ubuntu 20.04（支持安装多版本 Python）
 FROM ubuntu:20.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# 安装系统依赖和 Python 3.7 / 3.8 / R
+# 安装基础依赖和 deadsnakes 源
 RUN apt-get update && apt-get install -y --no-install-recommends \
     software-properties-common \
-    wget curl git build-essential ca-certificates \
+    wget curl git build-essential ca-certificates && \
+    add-apt-repository ppa:deadsnakes/ppa && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
     python3.8 python3.8-venv python3.8-dev \
     python3.7 python3.7-venv python3.7-dev \
     python3-pip r-base && \
@@ -19,7 +22,7 @@ RUN python3.7 -m venv /opt/py37 && /opt/py37/bin/pip install --upgrade pip
 WORKDIR /app
 COPY . /app
 
-# 安装两个环境下的依赖
+# 安装依赖
 RUN if [ -f requirements_py38.txt ]; then /opt/py38/bin/pip install -r requirements_py38.txt; fi
 RUN if [ -f requirements_py37.txt ]; then /opt/py37/bin/pip install -r requirements_py37.txt; fi
 
