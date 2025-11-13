@@ -1,0 +1,7 @@
+flask
+papermill
+nbconvert
+notebook
+numpy
+pandas
+# 如果需要 torch，考虑在本地或GPU环境单独安装
