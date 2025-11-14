@@ -30,6 +30,13 @@ RUN pyenv global 3.8.10 3.7.9
 RUN pyenv exec python3.8 -m venv /opt/py38 && /opt/py38/bin/pip install --upgrade pip
 RUN pyenv exec python3.7 -m venv /opt/py37 && /opt/py37/bin/pip install --upgrade pip
 
+# ============ 新增：安装 Jupyter kernel ============
+RUN /opt/py38/bin/pip install ipykernel
+RUN /opt/py38/bin/python -m ipykernel install --name python3 --display-name "python 3"
+RUN /opt/py37/bin/pip install ipykernel
+RUN /opt/py37/bin/python -m ipykernel install --name python2 --display-name "python 2"
+# ================================================
+
 # 设置工作目录
 WORKDIR /app
 COPY . /app
