@@ -35,6 +35,11 @@ RUN /opt/py38/bin/pip install ipykernel
 RUN /opt/py38/bin/python -m ipykernel install --name python3 --display-name "python 3"
 RUN /opt/py37/bin/pip install ipykernel
 RUN /opt/py37/bin/python -m ipykernel install --name python2 --display-name "python 2"
+# 给 pyenv 的 python3.8 安装 kernel
+RUN /root/.pyenv/versions/3.8.10/bin/python -m ipykernel install --name python3 --display-name "Python 3"
+
+# 给 pyenv 的 python3.7 安装 kernel
+RUN /root/.pyenv/versions/3.7.9/bin/python -m ipykernel install --name python2 --display-name "Python 2"
 # ================================================
 
 # 设置工作目录
