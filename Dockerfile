@@ -39,6 +39,14 @@ RUN conda update -n base -c defaults conda -y && \
 # ------------------------------------------------------
 # 5. Install Python dependencies
 # ------------------------------------------------------
+
+# 安装构建依赖
+RUN apt-get update && apt-get install -y \
+    git \
+    cmake \
+    ninja-build \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
 COPY requirements_py37.txt /tmp/req37.txt
 COPY requirements_py38.txt /tmp/req38.txt
 
