@@ -1,14 +1,8 @@
-papermill
-nbconvert
-notebook
-numpy
-pandas
-# pyradiomics
-# scikit-image
 pyradiomics
 SimpleITK
 numpy
 pandas
 tqdm
+papermill
 nbformat
 opencv-python-headless
