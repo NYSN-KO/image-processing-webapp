@@ -47,6 +47,9 @@ RUN apt-get update && apt-get install -y \
     ninja-build \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
+
+RUN conda install -n py37 -c simpleitk simpleitk==2.2.1 -c conda-forge pyradiomics -y
+
 COPY requirements_py37.txt /tmp/req37.txt
 COPY requirements_py38.txt /tmp/req38.txt
 
