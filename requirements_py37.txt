@@ -5,3 +5,10 @@ numpy
 pandas
 # pyradiomics
 # scikit-image
+pyradiomics
+SimpleITK
+numpy
+pandas
+tqdm
+nbformat
+opencv-python-headless
