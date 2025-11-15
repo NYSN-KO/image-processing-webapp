@@ -9,3 +9,13 @@ opencv-python-headless
 Pillow
 tqdm
 numpy
+
+torch
+torchvision
+
+pillow
+tqdm
+
+
+nbformat
+click
