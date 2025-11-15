@@ -7,9 +7,8 @@ JOBDIR="$3"
 
 mkdir -p "$JOBDIR"
 
-Rscript r/run_R_from_txt.R "$INPUT" "$MODEL_DIR"
+Rscript r/run_R_from_txt.R "$INPUT" "$MODEL_DIR" || true
 
-# copy radiomics_outputs if exists
 if [ -d "radiomics_results" ]; then
     mkdir -p "${JOBDIR}/radiomics_results"
     cp -r radiomics_results/* "${JOBDIR}/radiomics_results/" || true
