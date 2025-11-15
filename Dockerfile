@@ -31,8 +31,10 @@ RUN conda run -n py37 pip install -r /tmp/req37.txt
 RUN conda run -n py38 pip install -r /tmp/req38.txt
 
 # Install papermill + Jupyter kernels
-RUN conda install -y -n py38 ipykernel papermill && \
+RUN conda install -y -n py38 ipykernel && \
+    conda run -n py38 pip install papermill && \
     conda run -n py38 python -m ipykernel install --user --name python38 --display-name "Python 3.8"
+
 
 RUN conda install -y -n py37 ipykernel && \
     conda run -n py37 python -m ipykernel install --user --name python37 --display-name "Python 3.7"
