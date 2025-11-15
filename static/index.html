@@ -1,11 +1,59 @@
-<!doctype html>
-<html>
-  <head><meta charset="utf-8"><title>Upload Image</title></head>
-  <body>
-    <h1>上传图片进行处理</h1>
-    <form method="post" enctype="multipart/form-data" action="/process">
-      <input type="file" name="file" accept="image/*" required>
-      <button type="submit">上传并处理</button>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>OCT Processing</title>
+    <style>
+        body { font-family: Arial; padding: 40px; }
+        .box { border: 1px solid #ccc; padding: 20px; width: 400px; }
+    </style>
+</head>
+<body>
+
+<h2>Upload OCT Image</h2>
+
+<div class="box">
+    <form id="uploadForm" enctype="multipart/form-data">
+        <label>Select image:</label><br>
+        <input type="file" name="file" accept="image/*" required><br><br>
+
+        <button type="submit">Start Processing</button>
     </form>
-  </body>
+</div>
+
+<br>
+<div id="status"></div>
+
+<script>
+document.getElementById("uploadForm").onsubmit = async function (e) {
+    e.preventDefault();
+
+    let form = document.getElementById("uploadForm");
+    let data = new FormData(form);
+
+    document.getElementById("status").innerHTML = "Processing... Please wait.";
+
+    let res = await fetch("/process", {
+        method: "POST",
+        body: data
+    });
+
+    if (res.status === 200) {
+        // receive zip
+        let blob = await res.blob();
+        let url = window.URL.createObjectURL(blob);
+        let a = document.createElement("a");
+        a.href = url;
+        a.download = "results.zip";
+        a.click();
+        document.getElementById("status").innerHTML = "Done! Result downloaded.";
+    } else {
+        // show error
+        let txt = await res.text();
+        document.getElementById("status").innerHTML = "<b>Error:</b><br>" + txt;
+    }
+}
+</script>
+
+</body>
 </html>
