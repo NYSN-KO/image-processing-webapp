@@ -2,48 +2,46 @@ FROM ubuntu:20.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install system deps + deadsnakes PPA for python3.7
-RUN apt-get update && \
-    apt-get install -y software-properties-common && \
-    add-apt-repository ppa:deadsnakes/ppa && \
-    apt-get update && \
-    apt-get install -y \
-        wget curl git build-essential ca-certificates \
-        python3.7 python3.7-venv python3.7-dev \
-        python3.8 python3.8-venv python3.8-dev \
-        python3-pip \
-        r-base \
-        libssl-dev libxml2-dev libcurl4-openssl-dev libjpeg-dev zlib1g-dev && \
-    rm -rf /var/lib/apt/lists/*
+# Install system deps
+RUN apt-get update && apt-get install -y \
+    wget curl git build-essential ca-certificates \
+    r-base \
+    libssl-dev libxml2-dev libcurl4-openssl-dev libjpeg-dev zlib1g-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# Create virtual envs for 3.7 and 3.8
-RUN python3.7 -m venv /opt/py37 && \
-    python3.8 -m venv /opt/py38
+# Install Miniconda
+ENV CONDA_DIR=/opt/conda
+RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/conda.sh && \
+    bash /tmp/conda.sh -b -p $CONDA_DIR && \
+    rm /tmp/conda.sh
+ENV PATH=$CONDA_DIR/bin:$PATH
 
-# Upgrade pip inside both envs
-RUN /opt/py37/bin/pip install --upgrade pip && \
-    /opt/py38/bin/pip install --upgrade pip
+# Create Python 3.7 and 3.8 environments
+RUN conda create -y -n py37 python=3.7 && conda create -y -n py38 python=3.8
 
-# Install python requirements
+# Install pip packages
 COPY requirements_py37.txt /tmp/req37.txt
 COPY requirements_py38.txt /tmp/req38.txt
 
-RUN /opt/py37/bin/pip install -r /tmp/req37.txt
-RUN /opt/py38/bin/pip install -r /tmp/req38.txt
+RUN conda run -n py37 pip install -r /tmp/req37.txt
+RUN conda run -n py38 pip install -r /tmp/req38.txt
 
-# Install jupyter kernels for papermill
-RUN /opt/py38/bin/python -m ipykernel install --name python38 --display-name "Python 3.8"
-RUN /opt/py37/bin/python -m ipykernel install --name python37 --display-name "Python 3.7"
+# Install papermill + Jupyter kernels
+RUN conda install -y -n py38 ipykernel papermill && \
+    conda run -n py38 python -m ipykernel install --user --name python38 --display-name "Python 3.8"
 
-# Create working directory
+RUN conda install -y -n py37 ipykernel && \
+    conda run -n py37 python -m ipykernel install --user --name python37 --display-name "Python 3.7"
+
+# Set workdir
 WORKDIR /app
 
-# Copy entire repo
+# Copy whole project
 COPY . /app
 
-# Install Flask dependencies (in py38)
-RUN /opt/py38/bin/pip install flask
+# Flask must run in py38
+RUN conda run -n py38 pip install flask
 
 EXPOSE 10000
 
-CMD ["/opt/py38/bin/python", "app.py"]
+CMD ["conda", "run", "--no-capture-output", "-n", "py38", "python", "app.py"]
