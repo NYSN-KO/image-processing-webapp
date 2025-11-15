@@ -16,6 +16,10 @@ RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -
     rm /tmp/conda.sh
 ENV PATH=$CONDA_DIR/bin:$PATH
 
+# ⭐⭐ 必须接受 Conda TOS，不然不能创建 py37
+RUN conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+
 # Create Python 3.7 and 3.8 environments
 RUN conda create -y -n py37 python=3.7 && conda create -y -n py38 python=3.8
 
