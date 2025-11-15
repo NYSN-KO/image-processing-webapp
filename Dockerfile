@@ -30,7 +30,7 @@ COPY requirements_py38.txt /tmp/req38.txt
 RUN conda run -n py37 pip install -r /tmp/req37.txt
 RUN conda run -n py38 pip install -r /tmp/req38.txt
 
-# Install papermill + Jupyter kernels
+# Install papermill + Jupyter kernels for py38
 RUN conda install -y -n py38 ipykernel && \
     conda run -n py38 pip install papermill && \
     conda run -n py38 python -m ipykernel install --user --name python38 --display-name "Python 3.8"
