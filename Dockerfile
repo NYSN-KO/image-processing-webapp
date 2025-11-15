@@ -45,6 +45,9 @@ WORKDIR /app
 # Copy whole project
 COPY . /app
 
+# 🔥 FIX: give execute permission to .sh scripts
+RUN chmod +x /app/scripts/*.sh
+
 # Flask must run in py38
 RUN conda run -n py38 pip install flask
 
