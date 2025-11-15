@@ -23,8 +23,11 @@ ENV PATH=/opt/conda/bin:$PATH
 # ------------------------------------------------------
 # 3. Accept Anaconda Terms of Service (fix TOS error)
 # ------------------------------------------------------
-RUN conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
-    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+RUN echo "channels:" > /opt/conda/.condarc && \
+    echo "  - defaults" >> /opt/conda/.condarc && \
+    echo "channel_priority: flexible" >> /opt/conda/.condarc && \
+    echo "tos:" >> /opt/conda/.condarc && \
+    echo "  accepted: true" >> /opt/conda/.condarc
 
 # ------------------------------------------------------
 # 4. Create conda environments
