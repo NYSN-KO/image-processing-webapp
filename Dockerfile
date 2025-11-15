@@ -2,7 +2,7 @@ FROM ubuntu:20.04
 ENV DEBIAN_FRONTEND=noninteractive
 
 # ------------------------------------------------------
-# 1. Install basic system packages (NO python3.7 here!)
+# 1. Install system packages
 # ------------------------------------------------------
 RUN apt-get update --yes && apt-get install -y --no-install-recommends \
     python3.8 python3.8-venv python3.8-dev python3-pip \
@@ -13,22 +13,28 @@ RUN apt-get update --yes && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # ------------------------------------------------------
-# 2. Install Miniconda (will be used to provide Python 3.7)
+# 2. Install Miniconda
 # ------------------------------------------------------
 RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh && \
-    bash miniconda.sh -b -p /opt/conda && \
-    rm miniconda.sh
+    bash miniconda.sh -b -p /opt/conda && rm miniconda.sh
+
 ENV PATH=/opt/conda/bin:$PATH
 
 # ------------------------------------------------------
-# 3. Create conda environments: py38 & py37
+# 3. Accept Anaconda Terms of Service (fix TOS error)
+# ------------------------------------------------------
+RUN conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+
+# ------------------------------------------------------
+# 4. Create conda environments
 # ------------------------------------------------------
 RUN conda update -n base -c defaults conda -y && \
     conda create -n py38 python=3.8 -y && \
-    conda create -n py37 python=3.7 -y 
+    conda create -n py37 python=3.7 -y
 
 # ------------------------------------------------------
-# 4. Install Python packages
+# 5. Install Python dependencies
 # ------------------------------------------------------
 COPY requirements_py37.txt /tmp/req37.txt
 COPY requirements_py38.txt /tmp/req38.txt
@@ -37,13 +43,9 @@ RUN conda run -n py37 pip install --no-cache-dir -r /tmp/req37.txt
 RUN conda run -n py38 pip install --no-cache-dir -r /tmp/req38.txt
 
 # ------------------------------------------------------
-# 5. Copy project files
+# 6. Copy all project files
 # ------------------------------------------------------
 COPY . /app
 
-# ------------------------------------------------------
-# 6. Expose and start
-# ------------------------------------------------------
 EXPOSE 10000
 CMD ["python3.8", "app.py"]
-
