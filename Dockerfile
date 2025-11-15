@@ -63,3 +63,4 @@ COPY . /app
 
 EXPOSE 10000
 CMD ["python3.8", "app.py"]
+RUN pip install flask pillow numpy
