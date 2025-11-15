@@ -1,5 +1,4 @@
 pyradiomics
-SimpleITK==2.2.1
 numpy
 pandas
 tqdm
