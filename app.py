@@ -5,7 +5,7 @@ import shutil
 import zipfile
 import subprocess
 from pathlib import Path
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify, send_file, send_from_directory
 
 app = Flask(__name__)
 BASE_DIR = Path(__file__).resolve().parent
@@ -29,7 +29,7 @@ def run_cmd(cmd, cwd=None, env=None):
 
 @app.route("/", methods=["GET"])
 def index():
-    return "OCT pipeline API. POST image to /process"
+    return send_from_directory("static", "index.html")
 
 @app.route("/process", methods=["POST"])
 def process():
