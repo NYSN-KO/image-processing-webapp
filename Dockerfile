@@ -1,61 +1,71 @@
-FROM continuumio/miniconda3:4.12.0
+# ---------------------------------------------------------
+# 1. Base image：Miniconda3 (最稳定，兼容 Render)
+# ---------------------------------------------------------
+FROM continuumio/miniconda3:23.10.0
 
-ENV DEBIAN_FRONTEND=noninteractive
+# 加速 APT（必须）
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        curl wget git nano gcc g++ make build-essential \
+        libgl1-mesa-glx libglib2.0-0 dos2unix && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# ---------------------------------------------------------
+# 2. 创建工作目录
+# ---------------------------------------------------------
 WORKDIR /app
 
-# ------------------------------------------------------
-# 1) Install system packages + R (合并到一个 RUN 更快)
-# ------------------------------------------------------
-RUN apt-get update --yes && \
-    apt-get install -y --no-install-recommends \
-        build-essential \
-        r-base r-base-core \
-        ffmpeg libsm6 libxext6 libgl1-mesa-glx \
-        git cmake ninja-build \
-    && rm -rf /var/lib/apt/lists/*
+# ---------------------------------------------------------
+# 3. 创建 Python 3.7 环境
+# ---------------------------------------------------------
+RUN conda create -n py37 python=3.7 -y
+RUN conda run -n py37 pip install --no-cache-dir \
+        numpy==1.21.0 \
+        SimpleITK==2.2.1 \
+        pyradiomics==3.0.1
 
-# ------------------------------------------------------
-# 2) Create Python envs (极简 + 快)
-# ------------------------------------------------------
-RUN conda create -n py38 python=3.8 -y && \
-    conda create -n py37 python=3.7 -y
+# ---------------------------------------------------------
+# 4. Python 3.8 环境（用于 segmentation models）
+# ---------------------------------------------------------
+RUN conda create -n py38 python=3.8 -y
+RUN conda run -n py38 pip install --no-cache-dir \
+        torch==2.4.1 \
+        torchvision==0.19.1 \
+        segmentation-models-pytorch==0.3.3 \
+        numpy==1.24.4 \
+        pillow \
+        opencv-python-headless
 
-# ------------------------------------------------------
-# 3) Install SimpleITK + pyradiomics (用 pip 是最快 & 最稳)
-# ------------------------------------------------------
-RUN conda run -n py37 pip install --no-cache-dir SimpleITK==2.2.1 pyradiomics
+# ---------------------------------------------------------
+# 5. R 环境
+# ---------------------------------------------------------
+RUN conda create -n r_env -c conda-forge -y r-base=4.2.0 r-tidyverse r-jsonlite
 
-# ------------------------------------------------------
-# 4) Install project python deps
-# ------------------------------------------------------
-COPY requirements_py37.txt /tmp/req37.txt
-COPY requirements_py38.txt /tmp/req38.txt
+# ---------------------------------------------------------
+# 6. 复制应用文件 & 复制 scripts
+# ---------------------------------------------------------
+COPY app.py /app/app.py
+COPY static/ /app/static/
+COPY uploads/ /app/uploads/
+COPY scripts/ /app/scripts/
 
-RUN conda run -n py37 pip install --no-cache-dir -r /tmp/req37.txt && \
-    conda run -n py38 pip install --no-cache-dir -r /tmp/req38.txt
+# ---------------------------------------------------------
+# 7. 修复脚本权限（核心修复点）
+# ---------------------------------------------------------
+RUN dos2unix /app/scripts/*.sh || true
+RUN chmod +x /app/scripts/*.sh
 
-# ------------------------------------------------------
-# 5) Copy project source code
-# ------------------------------------------------------
-COPY . /app
+# ---------------------------------------------------------
+# 8. Flask 运行环境（系统 python）
+# ---------------------------------------------------------
+RUN pip install --no-cache-dir flask werkzeug==2.2.2
 
-# ------------------------------------------------------
-# 6) Copy scripts folder (正确路径！！！)
-# ------------------------------------------------------
-COPY scripts/ /scripts/
+# ---------------------------------------------------------
+# 9. 服务端口（Render 必须）
+# ---------------------------------------------------------
+EXPOSE 8000
 
-RUN chmod +x /scripts/run_py37_notebook.sh && \
-    chmod +x /scripts/run_py38_notebook.sh && \
-    chmod +x /scripts/run_r.sh
-
-# ------------------------------------------------------
-# 7) Install Flask into base Python (Render 入口)
-# ------------------------------------------------------
-RUN pip install flask pillow numpy
-
-EXPOSE 10000
-
-# ------------------------------------------------------
-# 8) Start API using system python (稳定)
-# ------------------------------------------------------
+# ---------------------------------------------------------
+# 10. 设置启动命令
+# ---------------------------------------------------------
 CMD ["python", "app.py"]
