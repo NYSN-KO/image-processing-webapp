@@ -51,6 +51,7 @@ RUN pip3 install flask papermill nbformat nbconvert
 # ------------------------------------------------------
 WORKDIR /app
 COPY . /app
+COPY SimpleITK.py /app/SimpleITK.py
 RUN chmod +x /app/scripts/*.sh
 
 # ------------------------------------------------------
@@ -58,3 +59,4 @@ RUN chmod +x /app/scripts/*.sh
 # ------------------------------------------------------
 EXPOSE 8080
 CMD ["/env_py38/bin/python", "app.py"]
+
