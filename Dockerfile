@@ -1,58 +1,65 @@
 # ---------------------------------------------------------
-# 基础镜像：micromamba（比 conda 快 10 倍）
+# 1. Base image
 # ---------------------------------------------------------
-FROM mambaorg/micromamba:latest
+FROM debian:bullseye-slim
 
+# ---------------------------------------------------------
+# 2. System dependencies
+# ---------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wget curl git build-essential \
+    python3 python3-pip python3-venv \
+    software-properties-common \
+    r-base \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# ---------------------------------------------------------
+# 3. Install Python 3.7 (via Deadsnakes PPA)
+# ---------------------------------------------------------
+RUN apt-get update && \
+    apt-get install -y gnupg2 && \
+    echo "deb http://ppa.launchpad.net/deadsnakes/ppa/ubuntu focal main" \
+        > /etc/apt/sources.list.d/deadsnakes.list && \
+    apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 6A755776 && \
+    apt-get update && \
+    apt-get install -y python3.7 python3.7-venv python3.7-distutils && \
+    curl -sS https://bootstrap.pypa.io/get-pip.py | python3.7
+
+# ---------------------------------------------------------
+# 4. Create two virtual environments
+# ---------------------------------------------------------
+RUN python3.7 -m venv /env_py37
+RUN python3   -m venv /env_py38   # system python3 = 3.8
+
+# ---------------------------------------------------------
+# 5. Install dependencies into each environment
+# ---------------------------------------------------------
+COPY requirements_py37.txt /app/requirements_py37.txt
+COPY requirements_py38.txt /app/requirements_py38.txt
+
+RUN /env_py37/bin/pip install --no-cache-dir -r /app/requirements_py37.txt
+RUN /env_py38/bin/pip install --no-cache-dir -r /app/requirements_py38.txt
+
+# ---------------------------------------------------------
+# 6. Install Flask + papermill + nbconvert (web backend)
+# ---------------------------------------------------------
+RUN pip3 install flask papermill nbformat nbconvert
+
+# ---------------------------------------------------------
+# 7. Copy project
+# ---------------------------------------------------------
 WORKDIR /app
+COPY . /app
 
-# ---------------------------------------------------------
-# 复制依赖文件
-# ---------------------------------------------------------
-COPY requirements_py37.txt /app/
-COPY requirements_py38.txt /app/
-
-# ---------------------------------------------------------
-# 用 micromamba 创建 3 个环境
-# ---------------------------------------------------------
-RUN micromamba create -y -n py37 python=3.7 -c conda-forge && \
-    micromamba create -y -n py38 python=3.8 -c conda-forge && \
-    micromamba create -y -n r_env r-base=4.2.0 r-tidyverse r-jsonlite -c conda-forge && \
-    micromamba clean --all --yes
-
-# ---------------------------------------------------------
-# 安装 Python 3.7 环境依赖
-# ---------------------------------------------------------
-RUN micromamba run -n py37 pip install --no-cache-dir SimpleITK==2.2.1 pyradiomics==3.0.1
-RUN micromamba run -n py37 pip install --no-cache-dir -r requirements_py37.txt
-
-# ---------------------------------------------------------
-# 安装 Python 3.8 环境依赖
-# ---------------------------------------------------------
-RUN micromamba run -n py38 pip install --no-cache-dir -r requirements_py38.txt
-
-# ---------------------------------------------------------
-# 安装 Flask + Notebook 工具（主环境）
-# ---------------------------------------------------------
-RUN pip install --no-cache-dir flask papermill nbformat nbconvert notebook
-
-# ---------------------------------------------------------
-# 复制项目文件
-# ---------------------------------------------------------
-COPY static/ /app/static/
-COPY models/ /app/models/
-COPY scripts/ /app/scripts/
-COPY r/ /app/r/
-COPY notebooks/ /app/notebooks/
-COPY original_notebooks/ /app/original_notebooks/
-
-# 脚本权限
+# Permissions for shell scripts
 RUN chmod +x /app/scripts/*.sh
 
-# app 主程序
-COPY app.py /app/app.py
+# ---------------------------------------------------------
+# 8. Expose port for Fly.io
+# ---------------------------------------------------------
+EXPOSE 8080
 
 # ---------------------------------------------------------
-# 运行 Flask
+# 9. Start Flask backend (using Python 3.8)
 # ---------------------------------------------------------
-EXPOSE 8000
-CMD ["python", "app.py"]
+CMD ["/env_py38/bin/python", "app.py"]
