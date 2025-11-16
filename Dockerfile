@@ -29,14 +29,16 @@ RUN conda create -n r_env -c conda-forge -y r-base=4.2.0 r-tidyverse r-jsonlite
 COPY requirements_py37.txt /app/requirements_py37.txt
 
 RUN conda run -n py37 pip install --no-cache-dir SimpleITK==2.2.1 pyradiomics==3.0.1
-RUN conda run -n py37 pip install --no-cache-dir -r /app/requirements_py37.txt
+RUN conda run -n py37 python -m pip install --no-cache-dir -r /app/requirements_py37.txt
+
 
 # ---------------------------------------------------------
 # 5. 安装 py38 依赖
 #   - 全部使用 requirements_py38.txt
 # ---------------------------------------------------------
 COPY requirements_py38.txt /app/requirements_py38.txt
-RUN conda run -n py38 pip install --no-cache-dir -r /app/requirements_py38.txt
+RUN conda run -n py38 python -m pip install --no-cache-dir -r /app/requirements_py38.txt
+
 
 # ---------------------------------------------------------
 # 6. flask（放主环境即可）
@@ -64,4 +66,5 @@ COPY app.py /app/app.py
 # ---------------------------------------------------------
 EXPOSE 8000
 CMD ["python", "app.py"]
+
 
