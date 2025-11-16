@@ -1,70 +1,78 @@
-# ---------------------------------------------------------
-# 1. Base image：Miniconda（稳定 & Render 最兼容）
-# ---------------------------------------------------------
-FROM continuumio/miniconda3
+###########################################
+# Stage 1 — Builder（使用 Mamba 超高速构建环境）
+###########################################
+FROM mambaorg/micromamba:1.5.8 as builder
 
-# ---------------------------------------------------------
-# 2. APT 依赖（轻量、必要）
-# ---------------------------------------------------------
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        curl wget git nano gcc g++ make build-essential \
-        libgl1-mesa-glx libglib2.0-0 dos2unix && \
+ENV DEBIAN_FRONTEND=noninteractive
+WORKDIR /build
+
+# 准备 micromamba 环境
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        curl wget git ca-certificates dos2unix nano build-essential \
+        libgl1-mesa-glx libglib2.0-0 && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# 复制 requirements（越早越能利用缓存）
+COPY requirements_py37.txt requirements_py38.txt /build/
+
+# 用 micromamba 创建全部环境（1 步完成，极大加速）
+RUN micromamba create -y -n py37 python=3.7 && \
+    micromamba create -y -n py38 python=3.8 && \
+    micromamba create -y -n r_env -c conda-forge \
+        r-base=4.2.0 r-tidyverse r-jsonlite && \
+    micromamba clean --all --yes
+
+# 安装 py37 heavy deps
+RUN micromamba run -n py37 pip install --no-cache-dir \
+        SimpleITK==2.2.1 \
+        pyradiomics==3.1.0 && \
+    micromamba run -n py37 pip install --no-cache-dir \
+        -r /build/requirements_py37.txt
+
+# 安装 py38 deps
+RUN micromamba run -n py38 pip install --no-cache-dir \
+        -r /build/requirements_py38.txt
+
+# base 环境安装 Flask / papermill（避免 app.py ImportError）
+RUN micromamba install -n base -y pip && \
+    pip install --no-cache-dir flask papermill nbformat nbconvert notebook
+
+
+###########################################
+# Stage 2 — Runtime（极小的最终镜像）
+###########################################
+FROM mambaorg/micromamba:1.5.8
+
+ENV DEBIAN_FRONTEND=noninteractive
 WORKDIR /app
+USER root
 
-# ---------------------------------------------------------
-# 3. 创建 Conda 环境
-# ---------------------------------------------------------
-RUN conda create -n py37 python=3.7 -y
-RUN conda create -n py38 python=3.8 -y
-RUN conda create -n r_env -c conda-forge -y r-base=4.2.0 r-tidyverse r-jsonlite
+# 拷贝构建好的 conda 环境（秒级加载）
+COPY --from=builder /opt/conda /opt/conda
 
-# ---------------------------------------------------------
-# 4. 安装 py37 依赖
-#   - SimpleITK + pyradiomics 固定版本
-#   - 其他从 requirements_py37.txt
-# ---------------------------------------------------------
-COPY requirements_py37.txt /app/requirements_py37.txt
+ENV PATH=/opt/conda/bin:$PATH
 
-RUN conda run -n py37 pip install --no-cache-dir SimpleITK==2.2.1 pyradiomics==3.0.1
-RUN conda run -n py37 python -m pip install --no-cache-dir -r /app/requirements_py37.txt
+# 创建 uploads（不需要 COPY uploads/）
+RUN mkdir -p /app/uploads
 
-
-# ---------------------------------------------------------
-# 5. 安装 py38 依赖
-#   - 全部使用 requirements_py38.txt
-# ---------------------------------------------------------
-COPY requirements_py38.txt /app/requirements_py38.txt
-RUN conda run -n py38 python -m pip install --no-cache-dir -r /app/requirements_py38.txt
-
-
-# ---------------------------------------------------------
-# 6. flask（放主环境即可）
-# ---------------------------------------------------------
-RUN pip install flask
-
-# ---------------------------------------------------------
-# 7. 复制项目文件
-# ---------------------------------------------------------
+# 复制项目文件
 COPY static/ /app/static/
 COPY models/ /app/models/
 COPY scripts/ /app/scripts/
 COPY r/ /app/r/
 COPY notebooks/ /app/notebooks/
 COPY original_notebooks/ /app/original_notebooks/
-
-# 修复脚本权限
-RUN chmod +x /app/scripts/*.sh && dos2unix /app/scripts/*.sh
-
-# app.py（最后复制）
 COPY app.py /app/app.py
 
-# ---------------------------------------------------------
-# 8. 启动服务
-# ---------------------------------------------------------
+# 脚本权限（容错）
+RUN if [ -d /app/scripts ]; then \
+      chmod +x /app/scripts/*.sh 2>/dev/null || true ; \
+      find /app/scripts -type f -exec dos2unix {} \; 2>/dev/null || true ; \
+    fi
+
+# Render 使用 8000
 EXPOSE 8000
-CMD ["python", "app.py"]
 
-
+# 让 Flask 运行在 py38（你要求 ALL，都做了）
+CMD ["micromamba", "run", "-n", "py38", "python", "app.py"]
