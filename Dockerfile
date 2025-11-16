@@ -54,9 +54,9 @@ RUN conda run -n py38 pip install --no-cache-dir -r /tmp/req38.txt
 # ------------------------------------------------------
 # 7. Fix script permissions
 # ------------------------------------------------------
-RUN chmod +x /app/scripts/run_py37_notebook.sh && \
-    chmod +x /app/scripts/run_py38_notebook.sh && \
-    chmod +x /app/scripts/run_r.sh
+RUN chmod +x /scripts/run_py37_notebook.sh && \
+    chmod +x /scripts/run_py38_notebook.sh && \
+    chmod +x /scripts/run_r.sh
 
 # ------------------------------------------------------
 # 8. Install Flask into python3.8 (Render uses CMD python3.8)
