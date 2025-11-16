@@ -7,7 +7,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update --yes && apt-get install -y --no-install-recommends \
     python3.8 python3.8-venv python3.8-dev python3-pip \
     build-essential wget curl ca-certificates ffmpeg libsm6 libxext6 libgl1-mesa-glx \
-    r-base r-base-core \
+    r-base r-base-core git cmake ninja-build \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -21,24 +21,27 @@ RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -
 ENV PATH=/opt/conda/bin:$PATH
 
 # ------------------------------------------------------
-# 3. Accept Anaconda TOS
+# 3. Accept Anaconda Terms of Service
 # ------------------------------------------------------
 RUN conda config --set channel_priority flexible && \
     conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
     conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
 
 # ------------------------------------------------------
-# 4. Create py38 & py37 env
+# 4. Create py38 + py37 environments
 # ------------------------------------------------------
 RUN conda update -n base -c defaults conda -y && \
     conda create -n py38 python=3.8 -y && \
     conda create -n py37 python=3.7 -y
 
 # ------------------------------------------------------
-# 5. Install ITK/pyradiomics
+# 5. Install SimpleITK + pyradiomics (correct syntax!)
 # ------------------------------------------------------
-RUN conda install -n py37 -c simpleitk simpleitk=2.2.1 -c conda-forge pyradiomics -y
+RUN conda install -n py37 -c simpleitk -c conda-forge simpleitk=2.2.1 pyradiomics -y
 
+# ------------------------------------------------------
+# 6. Install Python dependencies
+# ------------------------------------------------------
 COPY requirements_py37.txt /tmp/req37.txt
 COPY requirements_py38.txt /tmp/req38.txt
 
@@ -46,19 +49,24 @@ RUN conda run -n py37 pip install --no-cache-dir -r /tmp/req37.txt
 RUN conda run -n py38 pip install --no-cache-dir -r /tmp/req38.txt
 
 # ------------------------------------------------------
-# 6. Copy project
+# 7. Give permissions to scripts (fix permission denied)
+# ------------------------------------------------------
+RUN chmod +x /app/scripts/run_py37_notebook.sh && \
+    chmod +x /app/scripts/run_py38_notebook.sh && \
+    chmod +x /app/scripts/run_r.sh
+
+# ------------------------------------------------------
+# 8. Install Flask into system python (Render uses CMD python3.8)
+# ------------------------------------------------------
+RUN pip install flask pillow numpy
+
+# ------------------------------------------------------
+# 9. Copy entire project
 # ------------------------------------------------------
 COPY . /app
 
 # ------------------------------------------------------
-# 7. Fix permission for shell scripts
+# 10. Expose and run
 # ------------------------------------------------------
-RUN chmod +x /app/scripts/*.sh
-
-# ------------------------------------------------------
-# 8. Web server
-# ------------------------------------------------------
-RUN pip install flask pillow numpy
-
 EXPOSE 10000
 CMD ["python3.8", "app.py"]
